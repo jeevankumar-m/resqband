@@ -138,6 +138,7 @@ export default function OverviewPage() {
             {[
               { label: "OVERVIEW", href: "/overview", icon: "▧" },
               { label: "RADAR_LINK", href: "/radar", icon: "◎" },
+              { label: "SOS_ALERT", href: "/sos", icon: "⚠" },
             ].map((link) => (
               <Link
                 key={link.label}
