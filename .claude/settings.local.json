@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find /c/Users/navya/Desktop/resqband -maxdepth 3 ! -path */node_modules ! -path */.next -type d)",
+      "Bash(npx next:*)"
+    ]
+  }
+}
