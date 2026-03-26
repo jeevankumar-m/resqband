@@ -130,6 +130,7 @@ export default function SosMonitorPage() {
               { label: "OVERVIEW", href: "/overview", icon: "▧" },
               { label: "RADAR_LINK", href: "/radar", icon: "◎" },
               { label: "SOS_ALERT", href: "/sos", icon: "⚠" },
+              { label: "ANALYTICS", href: "/analytics", icon: "◈" },
             ].map((link) => (
               <Link
                 key={link.label}
