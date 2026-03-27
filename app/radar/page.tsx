@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { isSos, parseWsPayload, type TelemetryPacket } from "@/lib/telemetry";
+import { useTelemetry } from "@/contexts/TelemetryContext";
+import { isSos, type TelemetryPacket } from "@/lib/telemetry";
 
 const MAX_DIST_M = 1000;
 
@@ -21,8 +22,6 @@ function senderBearing(sender: string): number {
   }
   return (15 + ((h >>> 0) % 330)) * (Math.PI / 180);
 }
-
-const WS_URL = process.env.NEXT_PUBLIC_WS_URL ?? "ws://localhost:8765";
 
 const PixelBrackets = () => (
   <>
@@ -162,64 +161,15 @@ function RadarDisplay({ live }: { live: TelemetryPacket | null }) {
 export default function RadarPage() {
   const pathname = usePathname();
   const [now, setNow] = useState(new Date());
-  const [wsConnected, setWsConnected] = useState(false);
-  const [serialPort, setSerialPort] = useState<string | null>(null);
-  /** Latest ranger seen on the wire — one blip only; updates when a new packet arrives. */
-  const [liveRanger, setLiveRanger] = useState<TelemetryPacket | null>(null);
+  const { packets, wsConnected, serialPort } = useTelemetry();
+  const liveRanger = useMemo(
+    () => packets.find((p) => p.rssi !== null) ?? null,
+    [packets],
+  );
 
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(timer);
-  }, []);
-
-  useEffect(() => {
-    let ws: WebSocket | null = null;
-    let cancelled = false;
-
-    const connect = () => {
-      if (cancelled) return;
-      ws = new WebSocket(WS_URL);
-
-      ws.onopen = () => {
-        if (!cancelled) setWsConnected(true);
-      };
-
-      ws.onmessage = (ev) => {
-        try {
-          const data: unknown = JSON.parse(String(ev.data));
-          const parsed = parseWsPayload(data);
-          if (!parsed) return;
-          if (parsed.type === "status") {
-            setSerialPort(parsed.serialPort);
-            return;
-          }
-          const pkt = parsed.packet;
-          if (pkt.rssi !== null) {
-            setLiveRanger(pkt);
-          }
-        } catch {
-          /* ignore malformed */
-        }
-      };
-
-      ws.onerror = () => {
-        if (!cancelled) setWsConnected(false);
-      };
-
-      ws.onclose = () => {
-        if (!cancelled) {
-          setWsConnected(false);
-          setSerialPort(null);
-        }
-      };
-    };
-
-    connect();
-
-    return () => {
-      cancelled = true;
-      ws?.close();
-    };
   }, []);
 
   return (
@@ -234,7 +184,7 @@ export default function RadarPage() {
         <aside className="w-64 flex flex-col border border-emerald-500/30 bg-emerald-950/10 backdrop-blur-md rounded-lg p-6 relative">
           <div className="mb-10 text-center border-b border-emerald-500/30 pb-6">
             <h1 className="text-2xl font-black tracking-tighter glow-text italic">
-              RESQ<span className="opacity-50">.SYS</span>
+              RESQ<span className="opacity-50">BAND</span>
             </h1>
             <p className="text-[10px] mt-1 text-emerald-700 font-black uppercase tracking-[0.2em]">Mil-Spec Interface</p>
           </div>

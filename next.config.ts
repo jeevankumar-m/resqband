@@ -1,9 +1,6 @@
 import type { NextConfig } from "next";
 
-const nextConfig: NextConfig = {
-  async redirects() {
-    return [{ source: "/", destination: "/overview", permanent: false }];
-  },
-};
+/** `/` is the marketing landing; `/overview` is the live command dashboard. */
+const nextConfig: NextConfig = {};
 
 export default nextConfig;

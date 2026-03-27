@@ -3,10 +3,8 @@
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { isPing, isPong, isSos, parseWsPayload, type TelemetryPacket } from "@/lib/telemetry";
-
-/** Same WebSocket as radar / `server.py` (default ws://localhost:8765). */
-const WS_URL = process.env.NEXT_PUBLIC_WS_URL ?? "ws://localhost:8765";
+import { useTelemetry } from "@/contexts/TelemetryContext";
+import { isPing, isPong, isSos, type TelemetryPacket } from "@/lib/telemetry";
 
 function packetKey(p: TelemetryPacket, i: number): string {
   return `${p.timestamp}|${p.sender}|${p.msgNumber ?? i}|${p.direction ?? ""}|${p.alertType}|${i}`;
@@ -49,64 +47,17 @@ const PixelBrackets = () => (
 );
 
 const MAX_ROWS = 200;
+const WS_HINT = process.env.NEXT_PUBLIC_WS_URL ?? "ws://localhost:8765";
 
 export default function OverviewPage() {
   const pathname = usePathname();
   const [now, setNow] = useState(new Date());
-  const [wsConnected, setWsConnected] = useState(false);
-  const [serialPort, setSerialPort] = useState<string | null>(null);
-  const [alerts, setAlerts] = useState<TelemetryPacket[]>([]);
+  const { packets, wsConnected, serialPort } = useTelemetry();
+  const alerts = packets.slice(0, MAX_ROWS);
 
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(timer);
-  }, []);
-
-  useEffect(() => {
-    let ws: WebSocket | null = null;
-    let cancelled = false;
-
-    const connect = () => {
-      if (cancelled) return;
-      ws = new WebSocket(WS_URL);
-
-      ws.onopen = () => {
-        if (!cancelled) setWsConnected(true);
-      };
-
-      ws.onmessage = (ev) => {
-        try {
-          const data: unknown = JSON.parse(String(ev.data));
-          const parsed = parseWsPayload(data);
-          if (!parsed || cancelled) return;
-          if (parsed.type === "status") {
-            setSerialPort(parsed.serialPort);
-            return;
-          }
-          setAlerts((prev) => [parsed.packet, ...prev].slice(0, MAX_ROWS));
-        } catch {
-          /* ignore */
-        }
-      };
-
-      ws.onerror = () => {
-        if (!cancelled) setWsConnected(false);
-      };
-
-      ws.onclose = () => {
-        if (!cancelled) {
-          setWsConnected(false);
-          setSerialPort(null);
-        }
-      };
-    };
-
-    connect();
-
-    return () => {
-      cancelled = true;
-      ws?.close();
-    };
   }, []);
 
   const sosCount = alerts.filter(isSos).length;
@@ -129,7 +80,7 @@ export default function OverviewPage() {
         <aside className="w-64 flex flex-col border border-emerald-500/30 bg-emerald-950/10 backdrop-blur-md rounded-lg p-6 relative">
           <div className="mb-10 text-center border-b border-emerald-500/30 pb-6">
             <h1 className="text-2xl font-black tracking-tighter glow-text">
-              RESQ<span className="opacity-50">.SYS</span>
+              RESQ<span className="opacity-50">BAND</span>
             </h1>
             <p className="text-[10px] mt-1 text-emerald-700 font-bold uppercase tracking-widest">Tactical Mesh OS v4.0</p>
           </div>
@@ -232,7 +183,7 @@ export default function OverviewPage() {
                 <div className="p-6 text-[10px] font-bold text-emerald-700/50 uppercase tracking-widest">
                   {wsConnected
                     ? "Listening — no packets yet."
-                    : `No WebSocket at ${WS_URL} — run: python server.py`}
+                    : `No WebSocket at ${WS_HINT} — run: python server.py`}
                 </div>
               )}
               {alerts.map((p, i) => (

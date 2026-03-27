@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import {
@@ -18,9 +18,9 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { parseWsPayload } from "@/lib/telemetry";
+import { useTelemetry } from "@/contexts/TelemetryContext";
 
-const WS_URL = process.env.NEXT_PUBLIC_WS_URL ?? "ws://localhost:8765";
+const WS_HINT = process.env.NEXT_PUBLIC_WS_URL ?? "ws://localhost:8765";
 const MAX_RSSI_POINTS = 200;
 const PATH_LOSS_N = 3.0;
 
@@ -55,92 +55,48 @@ const NAV = [
 export default function AnalyticsPage() {
   const pathname = usePathname();
   const [now, setNow] = useState(new Date());
-  const [wsConnected, setWsConnected] = useState(false);
-  const [serialPort, setSerialPort] = useState<string | null>(null);
-  const [rssiSeries, setRssiSeries] = useState<RssiPoint[]>([]);
-  const [typeCounts, setTypeCounts] = useState<Record<string, number>>({});
-  const [totalPackets, setTotalPackets] = useState(0);
-  const [rateTimestamps, setRateTimestamps] = useState<number[]>([]);
-  const seq = useRef(0);
+  const { packets, wsConnected, serialPort } = useTelemetry();
 
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(t);
   }, []);
 
-  useEffect(() => {
-    let ws: WebSocket | null = null;
-    let cancelled = false;
+  const totalPackets = packets.length;
 
-    const connect = () => {
-      if (cancelled) return;
-      ws = new WebSocket(WS_URL);
+  const ppm = useMemo(() => {
+    const t0 = now.getTime();
+    return packets.filter((p) => t0 - p.clientReceivedAt < 60_000).length;
+  }, [packets, now]);
 
-      ws.onopen = () => {
-        if (!cancelled) setWsConnected(true);
-      };
+  const typeCounts = useMemo(() => {
+    const acc: Record<string, number> = {};
+    for (const p of packets) {
+      const at = p.alertType.toUpperCase();
+      acc[at] = (acc[at] ?? 0) + 1;
+    }
+    return acc;
+  }, [packets]);
 
-      ws.onmessage = (ev) => {
-        try {
-          const data: unknown = JSON.parse(String(ev.data));
-          const parsed = parseWsPayload(data);
-          if (!parsed || cancelled) return;
-          if (parsed.type === "status") {
-            setSerialPort(parsed.serialPort);
-            return;
-          }
-          const pkt = parsed.packet;
-          const at = pkt.alertType.toUpperCase();
-          setTypeCounts((prev) => ({ ...prev, [at]: (prev[at] ?? 0) + 1 }));
-          setTotalPackets((n) => n + 1);
-          const t0 = Date.now();
-          setRateTimestamps((prev) => [...prev.filter((x) => t0 - x < 60_000), t0]);
-
-          if (pkt.rssi !== null) {
-            const ts = t0;
-            seq.current += 1;
-            const rssi = pkt.rssi;
-            const distM = Math.min(rssiToMeters(rssi), 1000);
-            setRssiSeries((prev) => {
-              const next: RssiPoint[] = [
-                ...prev,
-                {
-                  ts,
-                  timeLabel: formatClock(ts),
-                  rssi,
-                  distM: Math.round(distM),
-                  sender: pkt.sender,
-                  alertType: at,
-                },
-              ];
-              return next.slice(-MAX_RSSI_POINTS);
-            });
-          }
-        } catch {
-          /* ignore */
-        }
-      };
-
-      ws.onerror = () => {
-        if (!cancelled) setWsConnected(false);
-      };
-
-      ws.onclose = () => {
-        if (!cancelled) {
-          setWsConnected(false);
-          setSerialPort(null);
-        }
-      };
-    };
-
-    connect();
-    return () => {
-      cancelled = true;
-      ws?.close();
-    };
-  }, []);
-
-  const ppm = useMemo(() => rateTimestamps.length, [rateTimestamps]);
+  const rssiSeries = useMemo(() => {
+    const pts: RssiPoint[] = [];
+    for (const p of packets) {
+      if (p.rssi === null) continue;
+      const rssi = p.rssi;
+      const ts = p.clientReceivedAt;
+      const distM = Math.min(rssiToMeters(rssi), 1000);
+      pts.push({
+        ts,
+        timeLabel: formatClock(ts),
+        rssi,
+        distM: Math.round(distM),
+        sender: p.sender,
+        alertType: p.alertType.toUpperCase(),
+      });
+    }
+    pts.sort((a, b) => a.ts - b.ts);
+    return pts.slice(-MAX_RSSI_POINTS);
+  }, [packets]);
 
   const rssiStats = useMemo(() => {
     if (rssiSeries.length === 0) return { min: null as number | null, max: null as number | null, last: null as number | null };
@@ -179,7 +135,7 @@ export default function AnalyticsPage() {
         <aside className="w-64 shrink-0 flex flex-col border border-slate-600/40 bg-slate-950/60 backdrop-blur-md rounded-xl p-6">
           <div className="mb-8 text-center border-b border-slate-600/40 pb-6">
             <h1 className="text-2xl font-black tracking-tighter text-sky-400" style={{ textShadow: "0 0 14px rgba(56,189,248,0.35)" }}>
-              RESQ<span className="opacity-50">.SYS</span>
+              RESQ<span className="opacity-50">BAND</span>
             </h1>
             <p className="text-[10px] mt-1 text-slate-500 font-bold uppercase tracking-widest">Live analytics</p>
           </div>
@@ -223,7 +179,7 @@ export default function AnalyticsPage() {
             </div>
             <div className="text-right text-[10px] text-slate-500">
               <div>{now.toLocaleTimeString()}</div>
-              <div className="mt-1 text-slate-600">WS · {WS_URL}</div>
+              <div className="mt-1 text-slate-600">WS · {WS_HINT}</div>
             </div>
           </header>
 

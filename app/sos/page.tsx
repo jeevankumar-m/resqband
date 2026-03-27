@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { isSos, parseWsPayload, type TelemetryPacket } from "@/lib/telemetry";
+import { useTelemetry } from "@/contexts/TelemetryContext";
+import { isSos, type TelemetryPacket } from "@/lib/telemetry";
 
-const WS_URL = process.env.NEXT_PUBLIC_WS_URL ?? "ws://localhost:8765";
+const WS_HINT = process.env.NEXT_PUBLIC_WS_URL ?? "ws://localhost:8765";
 const MAX_SOS = 150;
 
 function sosKey(p: TelemetryPacket, i: number): string {
@@ -40,74 +41,45 @@ const PixelBrackets = () => (
 export default function SosMonitorPage() {
   const pathname = usePathname();
   const [now, setNow] = useState(new Date());
-  const [wsConnected, setWsConnected] = useState(false);
-  const [serialPort, setSerialPort] = useState<string | null>(null);
-  const [sosAlerts, setSosAlerts] = useState<TelemetryPacket[]>([]);
+  const { packets, wsConnected, serialPort } = useTelemetry();
+  const sosAlerts = useMemo(
+    () => packets.filter(isSos).slice(0, MAX_SOS),
+    [packets],
+  );
   const [pulseKey, setPulseKey] = useState<string | null>(null);
   const pulseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const prevNewestSosRef = useRef<string | null>(null);
 
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
 
-  useEffect(() => {
-    let ws: WebSocket | null = null;
-    let cancelled = false;
-
-    const connect = () => {
-      if (cancelled) return;
-      ws = new WebSocket(WS_URL);
-
-      ws.onopen = () => {
-        if (!cancelled) setWsConnected(true);
-      };
-
-      ws.onmessage = (ev) => {
-        try {
-          const data: unknown = JSON.parse(String(ev.data));
-          const parsed = parseWsPayload(data);
-          if (!parsed || cancelled) return;
-          if (parsed.type === "status") {
-            setSerialPort(parsed.serialPort);
-            return;
-          }
-          const pkt = parsed.packet;
-          if (!isSos(pkt)) return;
-
-          setSosAlerts((prev) => [pkt, ...prev].slice(0, MAX_SOS));
-          setPulseKey(`${pkt.timestamp}|${pkt.sender}|${pkt.msgNumber ?? ""}`);
-          if (pulseTimerRef.current) clearTimeout(pulseTimerRef.current);
-          pulseTimerRef.current = setTimeout(() => setPulseKey(null), 2200);
-        } catch {
-          /* ignore */
-        }
-      };
-
-      ws.onerror = () => {
-        if (!cancelled) setWsConnected(false);
-      };
-
-      ws.onclose = () => {
-        if (!cancelled) {
-          setWsConnected(false);
-          setSerialPort(null);
-        }
-      };
-    };
-
-    connect();
-
-    return () => {
-      cancelled = true;
-      if (pulseTimerRef.current) clearTimeout(pulseTimerRef.current);
-      ws?.close();
-    };
+  useLayoutEffect(() => {
+    prevNewestSosRef.current = sosAlerts[0]
+      ? `${sosAlerts[0].timestamp}|${sosAlerts[0].sender}|${sosAlerts[0].msgNumber ?? ""}`
+      : null;
   }, []);
 
   const newestKey = sosAlerts[0]
     ? `${sosAlerts[0].timestamp}|${sosAlerts[0].sender}|${sosAlerts[0].msgNumber ?? ""}`
     : null;
+
+  useEffect(() => {
+    if (!newestKey) return;
+    if (newestKey === prevNewestSosRef.current) return;
+    prevNewestSosRef.current = newestKey;
+    setPulseKey(newestKey);
+    if (pulseTimerRef.current) clearTimeout(pulseTimerRef.current);
+    pulseTimerRef.current = setTimeout(() => setPulseKey(null), 2200);
+  }, [newestKey]);
+
+  useEffect(() => {
+    return () => {
+      if (pulseTimerRef.current) clearTimeout(pulseTimerRef.current);
+    };
+  }, []);
+
   const isPulsing = pulseKey !== null && newestKey === pulseKey;
 
   return (
@@ -120,7 +92,7 @@ export default function SosMonitorPage() {
         <aside className="w-64 flex flex-col border border-red-500/30 bg-red-950/10 backdrop-blur-md rounded-lg p-6 relative">
           <div className="mb-10 text-center border-b border-red-500/30 pb-6">
             <h1 className="text-2xl font-black tracking-tighter text-red-400" style={{ textShadow: "0 0 12px rgba(239,68,68,0.45)" }}>
-              RESQ<span className="opacity-50">.SYS</span>
+              RESQ<span className="opacity-50">BAND</span>
             </h1>
             <p className="text-[10px] mt-1 text-red-800 font-bold uppercase tracking-widest">SOS Monitor</p>
           </div>
@@ -212,7 +184,7 @@ export default function SosMonitorPage() {
                 <div className="p-8 text-center text-[10px] font-bold text-red-900/60 uppercase tracking-widest">
                   {wsConnected
                     ? "Standing by — no SOS packets in this session."
-                    : `No link — run server.py · ${WS_URL}`}
+                    : `No link — run server.py · ${WS_HINT}`}
                 </div>
               )}
               {sosAlerts.map((p, i) => {
