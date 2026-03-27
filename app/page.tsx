@@ -126,6 +126,28 @@ const FeatureCard = ({ title, desc, index }: { title: string; desc: string; inde
   </motion.div>
 );
 
+function SectionHeading({
+  eyebrow,
+  title,
+  subtitle,
+  align = "center",
+}: {
+  eyebrow: string;
+  title: string;
+  subtitle: string;
+  align?: "center" | "left";
+}) {
+  return (
+    <div className={`mb-14 max-w-3xl ${align === "center" ? "mx-auto text-center" : ""}`}>
+      <p className="text-[10px] font-black uppercase tracking-[0.35em] text-emerald-700 mb-3">{eyebrow}</p>
+      <h2 className="text-3xl md:text-4xl font-black tracking-tight text-white uppercase italic">{title}</h2>
+      <p className="mt-4 text-sm md:text-base text-emerald-600/90 font-bold leading-relaxed uppercase tracking-tight">
+        {subtitle}
+      </p>
+    </div>
+  );
+}
+
 type HeroSlideProps = {
   active: boolean;
   children: ReactNode;
@@ -319,39 +341,282 @@ export default function LandingPage() {
         </div>
       </div>
 
-      {/* Rest of page — normal scroll */}
-      <div className="relative z-20 px-4 md:px-20">
-        <section className="min-h-screen flex flex-col justify-center pt-8">
-          <FeatureCard
-            index={0}
-            title="Mesh Resilience"
-            desc="Every node is a repeater. Build networks that span entire mountain ranges with zero cellular towers or satellites required."
-          />
-        </section>
+      {/* ─── Landing: product sections (hero above is unchanged) ─── */}
+      <div className="relative z-20 border-t border-emerald-500/15 bg-[#020402]">
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-emerald-950/20 to-transparent" />
 
-        <section className="min-h-screen flex flex-col justify-center items-end">
-          <FeatureCard
-            index={1}
-            title="Tactical RSSI"
-            desc="Proprietary log-distance path loss algorithms provide real-time distance estimation with sub-meter precision in optimal conditions."
-          />
-        </section>
+        <div className="mx-auto max-w-6xl px-4 md:px-8 lg:px-10">
+          {/* Trust / stack */}
+          <section className="relative py-16 md:py-20">
+            <SectionHeading
+              eyebrow="Built for field operations"
+              title="Everything you need to run a mesh"
+              subtitle="Hardware-agnostic telemetry, a live command console, and analytics that stay in sync with the field."
+            />
+            <div className="flex flex-wrap items-center justify-center gap-3 md:gap-4">
+              {["LoRa mesh", "ESP32 gateway", "Live WebSocket feed", "SOS + PING + PONG", "AES-256"].map((label) => (
+                <span
+                  key={label}
+                  className="rounded-full border border-emerald-500/25 bg-emerald-950/30 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-emerald-500/90"
+                >
+                  {label}
+                </span>
+              ))}
+            </div>
+          </section>
 
-        <section className="min-h-screen flex flex-col justify-center">
-          <FeatureCard
-            index={2}
-            title="Encrypted SOS"
-            desc="AES-256 bit encryption ensures that emergency signals are only visible to authorized tactical response teams."
-          />
-        </section>
+          {/* Stats */}
+          <section className="border-y border-emerald-500/15 bg-[#030805]/80 py-14 md:py-16">
+            <div className="grid grid-cols-2 gap-8 md:grid-cols-4 md:gap-6">
+              {[
+                { k: "Sub-second", v: "Live updates", d: "WebSocket stream to your browser" },
+                { k: "Multi-view", v: "One session", d: "Overview, radar, SOS, analytics" },
+                { k: "Open stack", v: "Arduino + Python", d: "Hackable hub & server" },
+                { k: "Field-first", v: "RSSI aware", d: "Distance cues from signal" },
+              ].map((s) => (
+                <div key={s.v} className="text-center md:text-left">
+                  <p className="text-[10px] font-black uppercase tracking-[0.25em] text-emerald-800">{s.k}</p>
+                  <p className="mt-2 text-xl font-black tabular-nums text-emerald-300 md:text-2xl">{s.v}</p>
+                  <p className="mt-1 text-[11px] font-bold uppercase leading-snug text-emerald-700/90">{s.d}</p>
+                </div>
+              ))}
+            </div>
+          </section>
 
-        <footer className="py-40 text-center border-t border-emerald-500/20">
-          <h2 className="text-4xl font-black text-white mb-8 tracking-tighter uppercase italic">Ready to deploy?</h2>
-          <div className="flex justify-center gap-6">
-            <span className="text-[10px] font-black opacity-30 tracking-[0.4em]">RESQBAND // 2026</span>
-            <span className="text-[10px] font-black opacity-30 tracking-[0.4em]">ENCRYPTED_CONNECTION</span>
-          </div>
-        </footer>
+          {/* Core capabilities */}
+          <section id="product" className="py-20 md:py-28">
+            <SectionHeading
+              eyebrow="Product"
+              title="Core capabilities"
+              subtitle="Three pillars that define how RESQBAND behaves when networks fail and seconds matter."
+            />
+            <div className="grid gap-10 md:grid-cols-3 md:gap-8">
+              <FeatureCard
+                index={0}
+                title="Mesh Resilience"
+                desc="Every node is a repeater. Build networks that span entire mountain ranges with zero cellular towers or satellites required."
+              />
+              <FeatureCard
+                index={1}
+                title="Tactical RSSI"
+                desc="Proprietary log-distance path loss algorithms provide real-time distance estimation with sub-meter precision in optimal conditions."
+              />
+              <FeatureCard
+                index={2}
+                title="Encrypted SOS"
+                desc="AES-256 bit encryption ensures that emergency signals are only visible to authorized tactical response teams."
+              />
+            </div>
+          </section>
+
+          {/* How it works */}
+          <section className="py-20 md:py-28">
+            <SectionHeading
+              eyebrow="Workflow"
+              title="How it works"
+              subtitle="From RF in the field to pixels on your dashboard — a straight path you can reason about under stress."
+            />
+            <div className="grid gap-8 md:grid-cols-3">
+              {[
+                {
+                  step: "01",
+                  title: "Nodes transmit",
+                  body: "Rangers and hubs exchange pings, SOS, and telemetry over LoRa with RSSI metadata.",
+                },
+                {
+                  step: "02",
+                  title: "Gateway aggregates",
+                  body: "The ESP32 hub forwards frames over serial to server.py, which normalizes and fans out events.",
+                },
+                {
+                  step: "03",
+                  title: "Console reacts",
+                  body: "Your browser holds a single WebSocket session — switch views without losing history.",
+                },
+              ].map((row) => (
+                <motion.div
+                  key={row.step}
+                  initial={{ opacity: 0, y: 24 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: "-60px" }}
+                  transition={{ duration: 0.5 }}
+                  className="relative rounded-xl border border-emerald-500/20 bg-gradient-to-b from-emerald-950/40 to-transparent p-8"
+                >
+                  <span className="text-4xl font-black text-emerald-500/20">{row.step}</span>
+                  <h3 className="mt-4 text-lg font-black uppercase tracking-tight text-white">{row.title}</h3>
+                  <p className="mt-3 text-sm font-bold leading-relaxed text-emerald-600/95">{row.body}</p>
+                </motion.div>
+              ))}
+            </div>
+          </section>
+
+          {/* Capability grid */}
+          <section className="py-20 md:py-28">
+            <SectionHeading
+              eyebrow="Platform"
+              title="What you get in the box"
+              subtitle="Operator-grade surfaces — not a prototype UI bolted onto a demo."
+            />
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {[
+                { t: "Live overview", d: "Unified feed of alerts with type, sender, RSSI, and timestamps." },
+                { t: "Tactical radar", d: "Synthetic bearing + distance from RSSI for situational awareness." },
+                { t: "SOS monitor", d: "Dedicated channel for emergency traffic with visual emphasis." },
+                { t: "Analytics", d: "Rolling rates, RSSI series, and mix by alert type for the session." },
+                { t: "Serial status", d: "Gateway connection surfaced in-app when the hub reports COM port." },
+                { t: "Session persistence", d: "Telemetry ring buffer survives route changes until you close the tab." },
+              ].map((item) => (
+                <motion.div
+                  key={item.t}
+                  initial={{ opacity: 0, y: 16 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: "-40px" }}
+                  className="rounded-lg border border-emerald-500/15 bg-[#050a08]/90 p-6 transition-colors hover:border-emerald-500/35"
+                >
+                  <h4 className="text-sm font-black uppercase tracking-tight text-emerald-300">{item.t}</h4>
+                  <p className="mt-2 text-xs font-bold leading-relaxed text-emerald-700">{item.d}</p>
+                </motion.div>
+              ))}
+            </div>
+          </section>
+
+          {/* Use cases */}
+          <section className="py-20 md:py-28">
+            <SectionHeading
+              eyebrow="Use cases"
+              title="Built for scenarios where comms disappear"
+              subtitle="Same stack — different missions. Position RESQBAND where failure is not an option."
+            />
+            <div className="grid gap-8 md:grid-cols-2">
+              {[
+                {
+                  title: "Search & rescue",
+                  body: "Track last-known signal strength and direction cues while teams move through terrain. SOS traffic stays visible in a dedicated monitor.",
+                },
+                {
+                  title: "Disaster & off-grid ops",
+                  body: "Stand up a mesh without carrier dependency. Analytics help you see whether the network is healthy before you commit assets.",
+                },
+              ].map((u) => (
+                <div
+                  key={u.title}
+                  className="rounded-xl border border-emerald-500/20 bg-emerald-950/20 p-8 md:p-10"
+                >
+                  <h3 className="text-xl font-black uppercase italic text-white">{u.title}</h3>
+                  <p className="mt-4 text-sm font-bold leading-relaxed text-emerald-600">{u.body}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* FAQ */}
+          <section className="py-20 md:pb-28">
+            <SectionHeading
+              eyebrow="FAQ"
+              title="Questions operators ask"
+              subtitle="Straight answers — no roadmap vapor."
+            />
+            <div className="mx-auto max-w-3xl space-y-3">
+              {[
+                {
+                  q: "Do I need cellular or Wi-Fi for the mesh?",
+                  a: "No. LoRa operates in license-free bands; the dashboard only needs a path to your Python server (local or tunneled).",
+                },
+                {
+                  q: "Will I lose data when I switch pages?",
+                  a: "No. The app keeps a shared telemetry buffer for the browser session so overview, radar, SOS, and analytics stay consistent.",
+                },
+                {
+                  q: "What hardware does this target?",
+                  a: "The reference stack uses an ESP32-class hub and Arduino-compatible ranger firmware — extend or swap radios within your constraints.",
+                },
+                {
+                  q: "Is this production-ready?",
+                  a: "It’s built as a serious field console. Hardening, auth, and deployment are yours to layer on top of the open pipeline.",
+                },
+              ].map((f) => (
+                <details
+                  key={f.q}
+                  className="group rounded-lg border border-emerald-500/20 bg-[#050a08]/80 px-5 py-4 open:border-emerald-500/40"
+                >
+                  <summary className="cursor-pointer list-none text-left text-sm font-black uppercase tracking-tight text-emerald-300 marker:content-none [&::-webkit-details-marker]:hidden">
+                    <span className="flex items-center justify-between gap-4">
+                      {f.q}
+                      <span className="text-emerald-600 transition group-open:rotate-45">+</span>
+                    </span>
+                  </summary>
+                  <p className="mt-4 border-t border-emerald-500/15 pt-4 text-sm font-bold leading-relaxed text-emerald-700">{f.a}</p>
+                </details>
+              ))}
+            </div>
+          </section>
+
+          {/* CTA */}
+          <section className="rounded-2xl border border-emerald-500/25 bg-gradient-to-br from-emerald-950/50 to-[#020402] px-8 py-14 text-center md:px-16">
+            <h2 className="text-3xl font-black uppercase italic tracking-tight text-white md:text-4xl">Ship the console next</h2>
+            <p className="mx-auto mt-4 max-w-xl text-sm font-bold uppercase tracking-tight text-emerald-600">
+              Open the live dashboard, plug your gateway, and validate the full loop in one sitting.
+            </p>
+            <div className="mt-10 flex flex-wrap justify-center gap-4">
+              <Link
+                href="/overview"
+                className="rounded-lg bg-emerald-500 px-8 py-3.5 text-sm font-black text-black transition hover:bg-white"
+              >
+                Launch command center
+              </Link>
+              <Link
+                href="/analytics"
+                className="rounded-lg border border-emerald-500/50 px-8 py-3.5 text-sm font-black text-emerald-300 transition hover:bg-emerald-500/10"
+              >
+                View analytics
+              </Link>
+            </div>
+          </section>
+
+          {/* Footer */}
+          <footer className="mt-20 border-t border-emerald-500/20 py-16 md:py-20">
+            <div className="grid gap-12 md:grid-cols-4 md:gap-8">
+              <div className="md:col-span-2">
+                <p className="text-2xl font-black italic tracking-tight text-white">
+                  RESQ<span className="text-emerald-500">BAND</span>
+                </p>
+                <p className="mt-3 max-w-sm text-xs font-bold uppercase leading-relaxed text-emerald-800">
+                  Emergency mesh telemetry with a browser-native command surface.
+                </p>
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-800">Product</p>
+                <ul className="mt-4 space-y-2 text-sm font-bold text-emerald-600">
+                  <li>
+                    <Link href="/overview" className="hover:text-emerald-400">
+                      Overview
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/radar" className="hover:text-emerald-400">
+                      Radar
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/sos" className="hover:text-emerald-400">
+                      SOS monitor
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/analytics" className="hover:text-emerald-400">
+                      Analytics
+                    </Link>
+                  </li>
+                </ul>
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-800">Meta</p>
+                <p className="mt-4 text-[10px] font-black uppercase tracking-[0.35em] text-emerald-900">RESQBAND // 2026</p>
+                <p className="mt-2 text-[10px] font-black uppercase tracking-[0.35em] text-emerald-900">Encrypted link ready</p>
+              </div>
+            </div>
+          </footer>
+        </div>
       </div>
     </div>
   );
